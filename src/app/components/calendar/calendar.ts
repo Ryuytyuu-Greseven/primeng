@@ -110,7 +110,7 @@ export interface LocaleSettings {
                         </span>
                     </div>
                     <div class="p-yearpicker" *ngIf="currentView === 'year'">
-                        <span *ngFor="let y of yearPickerValues()" (click)="onYearSelect($event, y)" (keydown)="onYearCellKeydown($event,y)" class="p-yearpicker-year" [ngClass]="{'p-highlight': isYearSelected(y)}" pRipple>
+                        <span *ngFor="let y of yearPickerValues()" (click)="onYearSelect($event, y)" (keydown)="onYearCellKeydown($event,y)" class="p-yearpicker-year" [ngClass]="{'p-highlight': isYearSelected(y),'p-disabled': (y < yearStart || y > yearEnd) }" pRipple>
                             {{y}}
                         </span>
                     </div>
@@ -416,6 +416,10 @@ export class Calendar implements OnInit,OnDestroy,ControlValueAccessor {
 
     _yearRange: string;
 
+    yearStart: number;
+
+    yearEnd: number;
+
     preventDocumentListener: boolean;
 
     dateTemplate: TemplateRef<any>;
@@ -549,10 +553,10 @@ export class Calendar implements OnInit,OnDestroy,ControlValueAccessor {
 
         if (yearRange) {
             const years = yearRange.split(':');
-            const yearStart = parseInt(years[0]);
-            const yearEnd = parseInt(years[1]);
+            this.yearStart = parseInt(years[0]);
+            this.yearEnd = parseInt(years[1]);
 
-            this.populateYearOptions(yearStart, yearEnd);
+            this.populateYearOptions(this.yearStart, this.yearEnd);
         }
     }
 
@@ -815,10 +819,20 @@ export class Calendar implements OnInit,OnDestroy,ControlValueAccessor {
         this.isMonthNavigate = true;
 
         if (this.currentView === 'month') {
-            this.decrementYear();
-            setTimeout(() => {
-                this.updateFocus();
-            }, 1);
+            if (this._yearRange) {
+                // check if current year can be decremented
+                if (this.currentYear > this.yearStart) {
+                    this.decrementYear();
+                    setTimeout(() => {
+                        this.updateFocus();
+                    }, 1);
+                }
+            } else {
+                this.decrementYear();
+                setTimeout(() => {
+                    this.updateFocus();
+                }, 1);
+            }
         }
         else if (this.currentView === 'year') {
             this.decrementDecade();
@@ -828,8 +842,16 @@ export class Calendar implements OnInit,OnDestroy,ControlValueAccessor {
         }
         else {
             if (this.currentMonth === 0) {
-                this.currentMonth = 11;
-                this.decrementYear();
+                if (this._yearRange) {
+                // check if current year can be decremented
+                    if (this.currentYear > this.yearStart) {
+                        this.currentMonth = 11;
+                        this.decrementYear();
+                    }
+                } else {
+                    this.currentMonth = 11;
+                    this.decrementYear();
+                }
             }
             else {
                 this.currentMonth--;
@@ -849,10 +871,20 @@ export class Calendar implements OnInit,OnDestroy,ControlValueAccessor {
         this.isMonthNavigate = true;
 
         if (this.currentView === 'month') {
-            this.incrementYear();
-            setTimeout(() => {
-                this.updateFocus();
-            }, 1);
+            if (this._yearRange) {
+                // check if current year can be incremented
+                if (this.currentYear < this.yearEnd) {
+                    this.incrementYear();
+                    setTimeout(() => {
+                        this.updateFocus();
+                    }, 1);
+                }
+            } else {
+                this.incrementYear();
+                setTimeout(() => {
+                    this.updateFocus();
+                }, 1);
+            }
         }
         else if (this.currentView === 'year') {
             this.incrementDecade();
@@ -862,14 +894,22 @@ export class Calendar implements OnInit,OnDestroy,ControlValueAccessor {
         }
         else {
             if (this.currentMonth === 11) {
-                this.currentMonth = 0;
-                this.incrementYear();
+                if (this._yearRange) {
+                // check if current year can be incremented
+                    if (this.currentYear < this.yearEnd) {
+                        this.currentMonth = 0;
+                        this.incrementYear();
+                    }
+                } else {
+                    this.currentMonth = 0;
+                    this.incrementYear();
+                }
             }
             else {
                 this.currentMonth++;
             }
 
-            this.onMonthChange.emit({month: this.currentMonth + 1, year: this.currentYear});
+            this.onMonthChange.emit({ month: this.currentMonth + 1, year: this.currentYear });
             this.createMonths(this.currentMonth, this.currentYear);
         }
     }
